@@ -1,18 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "My Browser Extension",
+  "name": "Password Autofill",
   "version": "1.0.0",
   "description": "A modern password auto-fill browser extension.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
+  "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "index.html",
     "default_icon": {
-      "16": "assets/icon-16.png",
-      "48": "assets/icon-48.png",
-      "128": "assets/icon-128.png"
+      "32": "icon.png"
     }
   },
   "background": {
@@ -25,13 +25,11 @@
     }
   ],
   "icons": {
-    "16": "assets/icon-16.png",
-    "48": "assets/icon-48.png",
-    "128": "assets/icon-128.png"
+    "32": "icon.png"
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
+      "resources": ["assets/*", "index.html", "dictionary.html", "assets/content.js", "assets/background.js"],
       "matches": ["<all_urls>"]
     }
   ]

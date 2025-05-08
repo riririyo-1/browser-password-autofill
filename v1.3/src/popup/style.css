@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  @apply h-full min-h-screen; /* 画面全体の高さを確保 */
+}
+
+body {
+  @apply bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+  @apply p-0 sm:p-4; /* bodyのpaddingを調整し、dictionary-containerが画面端に寄るようにする */
+}
+
+.container {
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full;
+}
+
+.popup-container {
+  @apply bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl mx-auto;
+  width: 320px; /* 幅を320pxに調整 */
+  /* height: 420px; */ /* 固定高さを解除し、内容に合わせる */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* スクロールバーを非表示にする */
+}
+
+.header {
+  @apply text-xl font-bold mb-3 text-center text-gray-800 dark:text-gray-200; /* マージン縮小 */
+}
+
+.input-group {
+  @apply mb-2; /* マージン縮小 */
+}
+
+.label {
+  @apply block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1; /* フォントサイズ調整 */
+}
+
+.input {
+  @apply w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 text-sm; /* パディング・フォントサイズ調整 */
+}
+
+.button {
+  @apply w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 text-sm mt-1; /* パディング・フォントサイズ・マージン調整 */
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.button-secondary {
+  @apply w-full bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 font-semibold py-2 px-3 rounded-md shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-gray-800 text-sm mt-1; /* パディング・フォントサイズ・マージン調整 */
+}
+
+.footer {
+  @apply mt-3 text-center text-xs text-gray-500 dark:text-gray-400; /* マージン・フォントサイズ調整 */
+}
+
+/* Dictionary Page Specific Styles */
+.dictionary-container {
+    @apply bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl w-full mx-auto my-0; /* 上下マージンを0にし、bodyのpaddingでスペースを確保 */
+    /* max-width は解除し、画面幅いっぱいに広がるようにする */
+}
+
+.controls {
+    @apply mb-6 flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-3 sm:space-y-0;
+}
+
+.table-container {
+    @apply overflow-x-auto shadow-md rounded-lg;
+}
+
+table {
+    @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+}
+
+thead {
+    @apply bg-gray-50 dark:bg-gray-700;
+}
+
+th {
+    @apply px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider;
+}
+
+tbody {
+    @apply bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700;
+}
+
+td {
+    @apply px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200;
+}
+
+td .input { /* Ensure inputs within table cells are styled correctly */
+    @apply p-2 text-sm;
+}
+
+td .button { /* Ensure buttons within table cells are styled correctly */
+    @apply py-1 px-3 text-xs;
+}
+
+.action-buttons button {
+    @apply mr-2 last:mr-0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .container, .popup-container, .dictionary-container {
+        @apply p-4;
+    }
+
+    .header {
+        @apply text-xl mb-4;
+    }
+    /* Add more responsive adjustments as needed */
+}
