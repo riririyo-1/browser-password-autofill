@@ -12,25 +12,37 @@
   "action": {
     "default_popup": "index.html",
     "default_icon": {
-      "32": "icon.png"
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
   "background": {
-    "service_worker": "assets/background.js"
+    "service_worker": "assets/background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["assets/content.js"]
+      "js": ["assets/content.js"],
+      "run_at": "document_end"
     }
   ],
   "icons": {
-    "32": "icon.png"
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "index.html", "dictionary.html", "assets/content.js", "assets/background.js"],
+      "resources": ["assets/*", "*.html"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "author": "Browser Extensions Developer"
 }

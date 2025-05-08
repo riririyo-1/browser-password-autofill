@@ -1,15 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useReactTable, getCoreRowModel, getSortedRowModel, ColumnDef, createColumnHelper, flexRender } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, getSortedRowModel, ColumnDef, createColumnHelper, flexRender, SortingState } from '@tanstack/react-table';
 import '../popup/style.css';
-
-interface CredentialEntry {
-  username: string;
-  password: string;
-}
-
-interface Credentials {
-  [url: string]: CredentialEntry;
-}
+import { Credentials, CredentialEntry } from '../types';
 
 interface RowData {
   url: string;
@@ -17,7 +9,7 @@ interface RowData {
   password: string;
 }
 
-// DictionaryPageコンポーネントをexport defaultに変更
+// DictionaryPageコンポーネント
 const DictionaryPage = () => {
   const [credentials, setCredentials] = useState<Credentials>({});
   const [filter, setFilter] = useState('');
@@ -26,10 +18,25 @@ const DictionaryPage = () => {
     url: '', username: '', password: ''
   });
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'url', desc: false }]);
+  const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'success' | 'error' | '' }>({ 
+    text: '', 
+    type: '' 
+  });
 
   useEffect(() => {
     loadCredentials();
   }, []);
+  
+  // 一定時間後にステータスメッセージをクリアする
+  useEffect(() => {
+    if (statusMessage.text) {
+      const timer = setTimeout(() => {
+        setStatusMessage({ text: '', type: '' });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusMessage]);
 
   const loadCredentials = () => {
     chrome.storage.local.get('credentials', ({ credentials = {} }) => {
@@ -64,6 +71,7 @@ const DictionaryPage = () => {
               className="input w-full"
               value={editForm.url}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm({...editForm, url: e.target.value})}
+              aria-label="URL編集"
             />
           );
         }
@@ -80,6 +88,7 @@ const DictionaryPage = () => {
               className="input w-full"
               value={editForm.username}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm({...editForm, username: e.target.value})}
+              aria-label="ユーザー名編集"
             />
           );
         }
@@ -99,6 +108,7 @@ const DictionaryPage = () => {
               type={visiblePasswords[url] ? 'text' : 'password'}
               value={editForm.password}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm({...editForm, password: e.target.value})}
+              aria-label="パスワード編集"
             />
           );
         }
@@ -118,6 +128,7 @@ const DictionaryPage = () => {
               className="w-4 h-4 text-blue-600"
               checked={!!visiblePasswords[url]}
               onChange={() => togglePasswordVisibility(url)}
+              aria-label={`${visiblePasswords[url] ? 'パスワードを隠す' : 'パスワードを表示'}`}
             />
           </div>
         );
@@ -135,12 +146,14 @@ const DictionaryPage = () => {
               <button 
                 className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
                 onClick={() => handleUpdate()}
+                aria-label="変更を保存"
               >
                 保存
               </button>
               <button 
                 className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"
                 onClick={cancelEdit}
+                aria-label="編集をキャンセル"
               >
                 キャンセル
               </button>
@@ -153,12 +166,14 @@ const DictionaryPage = () => {
             <button 
               className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
               onClick={() => startEdit(url)}
+              aria-label="このエントリを編集"
             >
               編集
             </button>
             <button 
               className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
               onClick={() => handleDelete(url)}
+              aria-label="このエントリを削除"
             >
               削除
             </button>
@@ -171,6 +186,10 @@ const DictionaryPage = () => {
   const table = useReactTable({
     data,
     columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -195,21 +214,34 @@ const DictionaryPage = () => {
   const handleUpdate = () => {
     if (!editingUrl) return;
     
-    const updatedCreds = { ...credentials };
-    if (editingUrl !== editForm.url) {
-      delete updatedCreds[editingUrl];
+    // 入力検証
+    if (!editForm.url.trim() || !editForm.username.trim() || !editForm.password.trim()) {
+      setStatusMessage({ text: '全ての項目を入力してください', type: 'error' });
+      return;
     }
     
-    updatedCreds[editForm.url] = {
-      username: editForm.username,
-      password: editForm.password
-    };
-    
-    chrome.storage.local.set({ credentials: updatedCreds }, () => {
-      setCredentials(updatedCreds);
-      setEditingUrl(null);
-      alert("更新しました");
-    });
+    try {
+      // URLの検証 (必要に応じて)
+      new URL(editForm.url);
+      
+      const updatedCreds = { ...credentials };
+      if (editingUrl !== editForm.url) {
+        delete updatedCreds[editingUrl];
+      }
+      
+      updatedCreds[editForm.url] = {
+        username: editForm.username,
+        password: editForm.password
+      };
+      
+      chrome.storage.local.set({ credentials: updatedCreds }, () => {
+        setCredentials(updatedCreds);
+        setEditingUrl(null);
+        setStatusMessage({ text: "更新しました", type: 'success' });
+      });
+    } catch (error) {
+      setStatusMessage({ text: "有効なURLを入力してください", type: 'error' });
+    }
   };
 
   const handleDelete = (url: string) => {
@@ -219,7 +251,7 @@ const DictionaryPage = () => {
       
       chrome.storage.local.set({ credentials: updatedCreds }, () => {
         setCredentials(updatedCreds);
-        alert("削除しました");
+        setStatusMessage({ text: "削除しました", type: 'success' });
       });
     }
   };
@@ -232,6 +264,7 @@ const DictionaryPage = () => {
     a.download = 'password_credentials.json';
     a.click();
     URL.revokeObjectURL(url);
+    setStatusMessage({ text: "エクスポート完了", type: 'success' });
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,11 +279,11 @@ const DictionaryPage = () => {
         
         chrome.storage.local.set({ credentials: merged }, () => {
           setCredentials(merged);
-          alert("インポート完了");
+          setStatusMessage({ text: "インポート完了", type: 'success' });
           event.target.value = ''; // ファイル選択をリセット
         });
       } catch (error) {
-        alert("インポートに失敗しました。ファイル形式を確認してください。");
+        setStatusMessage({ text: "インポートに失敗しました。ファイル形式を確認してください。", type: 'error' });
       }
     };
     reader.readAsText(file);
@@ -266,22 +299,33 @@ const DictionaryPage = () => {
         <div className="flex flex-col sm:flex-row gap-2">
           <button 
             onClick={handleExport}
-            className="btn-secondary text-sm"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm"
+            aria-label="登録情報をJSONファイルとしてエクスポート"
           >
             エクスポート
           </button>
           
-          <label className="btn-secondary text-sm flex items-center justify-center cursor-pointer">
+          <label className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm flex items-center justify-center cursor-pointer">
             インポート
             <input
               type="file"
               className="hidden"
               accept="application/json"
               onChange={handleImport}
+              aria-label="JSONファイルからデータをインポート"
             />
           </label>
         </div>
       </div>
+      
+      {statusMessage.text && (
+        <div className={`mb-4 p-2 rounded ${
+          statusMessage.type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 
+          statusMessage.type === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' : ''
+        }`}>
+          {statusMessage.text}
+        </div>
+      )}
       
       <div className="mb-4">
         <input
@@ -290,6 +334,7 @@ const DictionaryPage = () => {
           placeholder="URL またはユーザー名で検索..."
           value={filter}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
+          aria-label="検索"
         />
       </div>
       
@@ -298,31 +343,53 @@ const DictionaryPage = () => {
           <thead className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th 
-                    key={header.id}
-                    scope="col"
-                    className="px-4 py-3 font-medium uppercase tracking-wide"
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
+                {headerGroup.headers.map(header => {
+                  const isSortable = header.column.getCanSort();
+                  return (
+                    <th 
+                      key={header.id}
+                      scope="col"
+                      className={`px-4 py-3 font-medium uppercase tracking-wide ${isSortable ? 'cursor-pointer select-none' : ''}`}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      <div className="flex items-center justify-between">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {isSortable && (
+                          <span className="ml-1">
+                            {{
+                              asc: '🔼',
+                              desc: '🔽',
+                            }[header.column.getIsSorted() as string] ?? ''}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             ))}
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {table.getRowModel().rows.map(row => (
-              <tr key={row.id}>
-                {row.getVisibleCells().map(cell => (
-                  <td 
-                    key={cell.id}
-                    className="px-4 py-2"
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map(row => (
+                <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  {row.getVisibleCells().map(cell => (
+                    <td 
+                      key={cell.id}
+                      className="px-4 py-2"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-6 text-center text-gray-500">
+                  {filter ? '検索に一致するデータがありません' : 'ログイン情報がありません'}
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -330,5 +397,4 @@ const DictionaryPage = () => {
   );
 };
 
-// default exportを追加
 export default DictionaryPage;

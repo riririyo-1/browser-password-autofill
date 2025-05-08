@@ -1,3 +1,8 @@
+import { Credentials } from '../types';
+
+/**
+ * ユーザー名フィールドを識別して取得する
+ */
 function getUsernameField(): HTMLInputElement | null {
     return document.querySelector([
         "input[type='text']",
@@ -19,6 +24,9 @@ function getUsernameField(): HTMLInputElement | null {
     ].join(", ")) as HTMLInputElement | null;
 }
 
+/**
+ * パスワードフィールドを識別して取得する
+ */
 function getPasswordField(): HTMLInputElement | null {
     return document.querySelector([
         "input[type='password']",
@@ -32,68 +40,148 @@ function getPasswordField(): HTMLInputElement | null {
     ].join(", ")) as HTMLInputElement | null;
 }
 
-interface Credentials {
-    [url: string]: {
-        username?: string;
-        password?: string;
-    };
-}
-
-function tryAutofillOrSave(credentials: Credentials) {
+/**
+ * 現在のページに保存済みの認証情報を自動入力する
+ */
+function tryAutofillCredentials(credentials: Credentials) {
     const currentUrl = window.location.origin;
     console.log("[Autofill] Current URL:", currentUrl);
 
     const usernameField = getUsernameField();
     const passwordField = getPasswordField();
 
+    if (!usernameField && !passwordField) {
+        console.log("[Autofill] ログインフォームが見つかりません");
+        return;
+    }
+
     if (credentials[currentUrl]) {
         const { username, password } = credentials[currentUrl];
-        if (usernameField && username) usernameField.value = username;
-        if (passwordField && password) passwordField.value = password;
-        // const form = usernameField?.closest("form") || passwordField?.closest("form");
+        if (usernameField && username) {
+            usernameField.value = username;
+            // 変更イベントを発火してフォームの検証を更新
+            dispatchInputEvent(usernameField);
+        }
+        if (passwordField && password) {
+            passwordField.value = password;
+            // 変更イベントを発火してフォームの検証を更新
+            dispatchInputEvent(passwordField);
+        }
+        console.log("[Autofill] 認証情報を自動入力しました");
     } else {
-        console.log("[Autofill] No credentials found and fields are empty or missing.");
+        console.log("[Autofill] このサイト用の認証情報が見つかりません");
     }
 }
 
-function setupInputListener(currentUrl: string, credentials: Credentials) {
-    const form = document.querySelector("form");
-    if (!form) return;
+/**
+ * 入力フィールドに変更イベントを発火させる
+ */
+function dispatchInputEvent(field: HTMLInputElement) {
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+}
 
-    form.addEventListener("submit", () => {
-        const usernameField = getUsernameField();
-        const passwordField = getPasswordField();
+/**
+ * フォームの送信を監視し、認証情報を保存する
+ */
+function setupFormSubmissionListeners(currentUrl: string) {
+    // ページ内の全てのフォームを取得
+    const forms = document.querySelectorAll('form');
+    if (forms.length === 0) {
+        console.log("[Autofill] フォームが見つかりません");
+        return;
+    }
 
-        if (
-            usernameField && passwordField &&
-            usernameField.value && passwordField.value &&
-            !credentials[currentUrl] // Only save if not already present for this URL
-        ) {
-            const username = usernameField.value;
-            const password = passwordField.value;
-            const newCredentials = {
-                ...credentials,
-                [currentUrl]: { username, password }
-            };
-            chrome.storage.local.set({ credentials: newCredentials }, () => {
-                console.log("[Autofill] Saved credentials on form submit for", currentUrl);
-            });
-        }
+    console.log(`[Autofill] ${forms.length}個のフォームを監視します`);
+    
+    forms.forEach((form, index) => {
+        form.addEventListener("submit", () => {
+            // フォーム送信時にフィールド値を取得
+            const usernameField = form.querySelector(
+                "input[type='text'], input[type='email'], input[id*='user' i], input[name*='user' i], input[id*='email' i], input[name*='email' i]"
+            ) as HTMLInputElement | null;
+            
+            const passwordField = form.querySelector(
+                "input[type='password']"
+            ) as HTMLInputElement | null;
+            
+            if (usernameField && passwordField) {
+                const username = usernameField.value.trim();
+                const password = passwordField.value.trim();
+                
+                if (username && password) {
+                    saveCredentials(currentUrl, username, password);
+                }
+            }
+        });
     });
 }
 
-chrome.storage.local.get("credentials", (result) => {
-    const credentials = (result.credentials || {}) as Credentials;
-    tryAutofillOrSave(credentials);
-    setupInputListener(window.location.origin, credentials);
-});
+/**
+ * 認証情報をストレージに保存する
+ */
+function saveCredentials(url: string, username: string, password: string) {
+    chrome.storage.local.get({ credentials: {} }, (result) => {
+        const credentials = result.credentials as Credentials;
+        
+        // 既存の認証情報を更新または新規追加
+        credentials[url] = { username, password };
+        
+        chrome.storage.local.set({ credentials }, () => {
+            console.log(`[Autofill] サイト ${url} の認証情報を保存しました`);
+        });
+    });
+}
 
-// To ensure the types are correct for chrome storage
-// You might want to define a more specific type for your credentials
-// For example:
-// interface StoredCredentials {
-//   credentials?: Credentials;
-// }
-// chrome.storage.local.get("credentials", (result: StoredCredentials) => { ... });
+/**
+ * DOM変更を監視し、動的に追加されたフォームにリスナーを設定
+ */
+function setupDynamicFormMonitoring(currentUrl: string) {
+    const observer = new MutationObserver((mutations) => {
+        let formAdded = false;
+        
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach((node) => {
+                    if (node instanceof HTMLElement) {
+                        // 追加されたノードがフォームか、フォームを含むかチェック
+                        const forms = node.tagName === 'FORM' ? [node] : node.querySelectorAll('form');
+                        if (forms.length > 0) {
+                            formAdded = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (formAdded) {
+            console.log("[Autofill] 動的に追加されたフォームを検出しました");
+            setupFormSubmissionListeners(currentUrl);
+        }
+    });
+    
+    // ドキュメントの監視を開始
+    observer.observe(document.body, { childList: true, subtree: true });
+}
 
-console.log("Content script loaded for Password Autofill.");
+// 初期化処理
+function initialize() {
+    const currentUrl = window.location.origin;
+    
+    chrome.storage.local.get("credentials", (result) => {
+        const credentials = (result.credentials || {}) as Credentials;
+        
+        // 認証情報の自動入力
+        tryAutofillCredentials(credentials);
+        
+        // フォーム送信の監視設定
+        setupFormSubmissionListeners(currentUrl);
+        
+        // 動的に追加されるフォームの監視
+        setupDynamicFormMonitoring(currentUrl);
+    });
+}
+
+// コンテンツスクリプト実行開始
+console.log("[Autofill] コンテンツスクリプトを読み込みました");
+initialize();
