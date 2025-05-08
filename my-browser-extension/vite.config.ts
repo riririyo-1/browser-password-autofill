@@ -13,9 +13,9 @@ export default defineConfig({
         content: resolve(__dirname, 'src/content/content.ts'),
       },
       output: {
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        entryFileNames: 'assets/[name].js', // ハッシュを削除
+        chunkFileNames: 'assets/[name].js', // ハッシュを削除
+        assetFileNames: 'assets/[name].[ext]' // ハッシュを削除
       }
     },
   },
