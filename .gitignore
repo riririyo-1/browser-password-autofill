@@ -1,0 +1,21 @@
+# 機密情報
+.env
+config.json
+
+# ビルド成果物
+dist/
+build/
+
+# 依存関係
+node_modules/
+
+# ユーザー固有のファイル
+.vscode/
+.DS_Store
+Thumbs.db
+
+# テストやデバッグ用ファイル
+*.xlsx
+*.csv
+*.log
+*.tmp

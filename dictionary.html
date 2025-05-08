@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ユーザー辞書一覧</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>登録済みログイン情報</h2>
+    <div class="controls">
+        <input type="text" id="search" placeholder="検索（URLまたはユーザー名）">
+        <button id="export">エクスポート</button>
+        <input type="file" id="import" accept="application/json">
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th id="sort-url" style="cursor:pointer;">URL</th>
+                <th id="sort-user" style="cursor:pointer;">ユーザー名</th>
+                <th>パスワード</th>
+                <th>表示</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="dict-table"></tbody>
+    </table>
+    <script src="dictionary.js"></script>
+</body>
+</html>
