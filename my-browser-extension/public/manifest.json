@@ -16,12 +16,12 @@
     }
   },
   "background": {
-    "service_worker": "src/background/background.ts"
+    "service_worker": "assets/background-[hash].js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content/content.ts"]
+      "js": ["assets/content-[hash].js"]
     }
   ],
   "icons": {
